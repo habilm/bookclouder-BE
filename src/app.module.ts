@@ -5,6 +5,7 @@ import { UsersModule } from './users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailModule } from './email/email.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -20,6 +21,18 @@ import { EmailModule } from './email/email.module';
           return c;
         },
       }),
+    }),
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async function (configService: ConfigService) {
+        return {
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: { expiresIn: '24h' },
+          global: true,
+        };
+      },
     }),
     UsersModule,
     EmailModule,
