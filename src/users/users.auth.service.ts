@@ -51,6 +51,9 @@ export class UsersAuthService {
     });
   }
 
+  async verifyEmail(uuid: string): Promise<boolean> {
+    return await this.email.verifyEmail(uuid);
+  }
   async forgotPassword(id: number) {
     return `This action returns a #${id} user`;
   }

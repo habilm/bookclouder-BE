@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsString,
   Matches,
   MaxLength,
   MinLength,
@@ -30,4 +31,9 @@ export class LoginDto {
 
   @IsNotEmpty()
   password: string;
+}
+export class VerifyEmailDto {
+  @IsNotEmpty()
+  @IsString()
+  uuid: string;
 }

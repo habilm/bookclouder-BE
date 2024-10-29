@@ -1,8 +1,9 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Req } from '@nestjs/common';
 
-import { LoginDto, SignupDto } from './dto/user.dto';
+import { LoginDto, SignupDto, VerifyEmailDto } from './dto/user.dto';
 import { UsersAuthService } from './users.auth.service';
-import { LoginResponseType } from 'src/utility/res';
+import { APIResponse, LoginResponseType } from 'src/utility/res';
+import { Request } from 'express';
 
 @Controller('auth')
 export class UsersAuthController {
@@ -19,6 +20,31 @@ export class UsersAuthController {
       createUserDto.email,
       createUserDto.password,
     );
+  }
+
+  @Get('verify-email/:uuid')
+  async verifyEmail(
+    @Req() req: Request,
+    @Param() verifyEmailDto: VerifyEmailDto,
+  ) {
+    const requestType =
+      req.headers['content-type']?.includes('application/json');
+    try {
+      const verified = await this.usersAuthService.verifyEmail(
+        verifyEmailDto.uuid,
+      );
+
+      if (verified) {
+        return requestType ? APIResponse('Email Verified') : 'Email Verified';
+      }
+    } catch (err) {
+      console.error(err);
+      if (requestType) {
+        throw err;
+      } else {
+        return err.message;
+      }
+    }
   }
 
   // @Get(':id')
