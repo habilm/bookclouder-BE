@@ -4,12 +4,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Handlebars from 'handlebars';
+
 import { Model } from 'mongoose';
 import * as fs from 'node:fs';
 import { Email } from './entities/email.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { generateCode } from 'src/utility/heper';
+import { getHtml } from 'src/utility/hbs';
 
 type MailSendOptions = {
   subject: string;
@@ -50,7 +51,7 @@ export class EmailService {
       'http://localhost:3000',
     )}/auth/verify-email/${createdEmail.token}`;
 
-    const html = this.getHtml(type, { fullName, url });
+    const html = getHtml(type, { fullName, url });
 
     this.send({
       subject: 'Bookclouder - OTP Verification',
@@ -109,15 +110,6 @@ export class EmailService {
       console.error(err);
       throw new Error('Failed to send email');
     }
-  }
-
-  getHtml(templateName: string, data: Record<string, string>): string {
-    const file = fs.readFileSync(
-      __dirname + `/templates/${templateName}.html`,
-      'utf8',
-    );
-    const template = Handlebars.compile(file);
-    return template(data);
   }
 
   async verifyEmail(uuid: string): Promise<boolean> {

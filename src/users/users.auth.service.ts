@@ -46,7 +46,7 @@ export class UsersAuthService {
     const jwtPayload = { sub: user._id, email: user.email };
     const token = await this.jwtService.signAsync(jwtPayload);
 
-    return LoginResponse('login Successful', token, {
+    return LoginResponse('Login Successful', token, {
       fullName: user.fullName,
     });
   }
