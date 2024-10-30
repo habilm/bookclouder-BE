@@ -3,10 +3,10 @@ import { SignupDto } from './dto/user.dto';
 import { User } from './entities/user.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { LoginResponse, LoginResponseType } from 'src/utility/res';
+import { LoginResponse, LoginResponseType } from '../utility/res';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { EmailService } from 'src/email/email.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class UsersAuthService {
@@ -23,14 +23,14 @@ export class UsersAuthService {
       throw new UnprocessableEntityException('Email already exists');
     }
     try {
-      // const created = await this.userModel.create(createUserDto);
-      // const user = created.toObject();
-      // delete user.password;
-      // delete user._id;
+      const created = await this.userModel.create(createUserDto);
+      const user = created.toObject();
+      delete user.password;
+      delete user._id;
 
       this.email.sendOTP(createUserDto.fullName, createUserDto.email);
 
-      return [];
+      return user;
     } catch (err) {
       console.error(err);
       throw new Error('Error creating user');

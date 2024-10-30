@@ -9,8 +9,8 @@ import { Model } from 'mongoose';
 import * as fs from 'node:fs';
 import { Email } from './entities/email.entity';
 import { InjectModel } from '@nestjs/mongoose';
-import { generateCode } from 'src/utility/heper';
-import { getHtml } from 'src/utility/hbs';
+import * as helper from '../utility/helper';
+import { getHtml } from '../utility/hbs';
 
 type MailSendOptions = {
   subject: string;
@@ -42,7 +42,7 @@ export class EmailService {
       toName: fullName,
       toEmail: email,
       name: type,
-      token: generateCode(),
+      token: helper.generateCode(),
       expireAt,
     });
 

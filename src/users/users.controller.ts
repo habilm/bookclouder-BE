@@ -12,7 +12,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { AuthGuard } from 'src/utility/auth.guard';
+import { AuthGuard } from '../utility/auth.guard';
 import { Request } from 'express';
 
 @Controller('users')

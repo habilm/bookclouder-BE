@@ -2,7 +2,7 @@ import { Controller, Post, Body, Get, Param, Req } from '@nestjs/common';
 
 import { LoginDto, SignupDto, VerifyEmailDto } from './dto/user.dto';
 import { UsersAuthService } from './users.auth.service';
-import { APIResponse, LoginResponseType } from 'src/utility/res';
+import { APIResponse, LoginResponseType } from '../utility/res';
 import { Request } from 'express';
 
 @Controller('auth')
