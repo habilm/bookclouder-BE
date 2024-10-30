@@ -1,4 +1,8 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { SignupDto } from './dto/user.dto';
 import { User } from './entities/user.entity';
 import { InjectModel } from '@nestjs/mongoose';
@@ -43,6 +47,10 @@ export class UsersAuthService {
       throw new UnprocessableEntityException('Invalid email or password');
     }
 
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
+
     const jwtPayload = { sub: user._id, email: user.email };
     const token = await this.jwtService.signAsync(jwtPayload);
 
@@ -52,7 +60,12 @@ export class UsersAuthService {
   }
 
   async verifyEmail(uuid: string): Promise<boolean> {
-    return await this.email.verifyEmail(uuid);
+    const verifiedEmail = await this.email.verifyEmail(uuid);
+    await this.userModel.updateOne(
+      { email: verifiedEmail },
+      { isEmailVerified: true },
+    );
+    return true;
   }
   async forgotPassword(id: number) {
     return `This action returns a #${id} user`;

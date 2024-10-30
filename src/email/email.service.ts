@@ -112,7 +112,12 @@ export class EmailService {
     }
   }
 
-  async verifyEmail(uuid: string): Promise<boolean> {
+  /**
+   *
+   * @param uuid The Unique string of the email address verification.
+   * @returns string The email address
+   */
+  async verifyEmail(uuid: string): Promise<string> {
     const email = await this.emailModel.findOneAndUpdate(
       {
         token: uuid,
@@ -120,13 +125,17 @@ export class EmailService {
       { isUsed: true },
     );
     if (email == null) {
-      throw new NotFoundException();
+      throw new UnauthorizedException('Link has expired');
     }
     const expired = new Date(email.expireAt);
     const now = new Date();
-    if (expired.getTime() <= now.getTime() && email.isUsed != true) {
+    if (email.isUsed == true) {
+      throw new UnauthorizedException('Your email already verified');
+    }
+    if (expired.getTime() <= now.getTime()) {
       throw new UnauthorizedException('Link has expired');
     }
-    return true;
+
+    return email.toEmail;
   }
 }
