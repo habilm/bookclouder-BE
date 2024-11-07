@@ -16,7 +16,7 @@ try {
   isAbleToWrite = true;
 } catch (err) {
   console.error('Error creating log file:', err);
-  isAbleToWrite = true;
+  isAbleToWrite = false;
 }
 
 export async function errorLog(
