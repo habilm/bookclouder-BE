@@ -2,6 +2,23 @@ import * as fs from 'fs';
 import * as paths from 'path';
 
 let fileNameSuffix: number = 0;
+let isAbleToWrite: boolean = false;
+const filePath = paths.join(__dirname, `../../logs/error${fileNameSuffix}.log`);
+
+try {
+  if (!fs.existsSync(paths.dirname(filePath))) {
+    fs.mkdirSync(paths.dirname(filePath));
+  }
+
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, '', 'utf8');
+  }
+  isAbleToWrite = true;
+} catch (err) {
+  console.error('Error creating log file:', err);
+  isAbleToWrite = true;
+}
+
 export async function errorLog(
   message: string,
   code: string | number = 0,
@@ -9,17 +26,11 @@ export async function errorLog(
   path: string = '',
   ip: string = '',
 ) {
-  const filePath = paths.join(
-    __dirname,
-    `../../logs/error${fileNameSuffix}.log`,
-  );
+  const logData = `${new Date().toISOString()}: [${ip}] ${method || ''} ${code || ''} ${path || ''} \n${message}\n\n`;
 
-  if (!fs.existsSync(paths.dirname(filePath))) {
-    fs.mkdirSync(paths.dirname(filePath));
-  }
-
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '', 'utf8');
+  if (!isAbleToWrite) {
+    console.log(logData);
+    return false;
   }
 
   // Get the file size
@@ -33,8 +44,5 @@ export async function errorLog(
     return;
   }
 
-  fs.appendFileSync(
-    filePath,
-    `${new Date().toISOString()}: [${ip}] ${method || ''} ${code || ''} ${path || ''} \n${message}\n\n`,
-  );
+  fs.appendFileSync(filePath, logData);
 }
