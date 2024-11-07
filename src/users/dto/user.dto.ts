@@ -1,4 +1,3 @@
-import { PasswordMatchConstraint } from '@/src/utility/decorators/checkPassword.decorators';
 import {
   IsEmail,
   IsNotEmpty,
@@ -8,6 +7,7 @@ import {
   MinLength,
   Validate,
 } from 'class-validator';
+import { PasswordMatchConstraint } from '../../utility/decorators/checkPassword.decorators';
 
 export class CreateUserDto {}
 

@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
 import { EmailService, EmailTypes } from '../email/email.service';
-import { getHtml } from '../utility/hbs';
+
 import { errorLog } from '../utility/logs';
 import {
   APIResponse,
@@ -18,6 +18,7 @@ import {
 } from '../utility/res';
 import { ForgotPasswordDto, SignupDto } from './dto/user.dto';
 import { User } from './entities/user.entity';
+import { getHtml } from '../utility/hbs';
 
 @Injectable()
 export class UsersAuthService {
