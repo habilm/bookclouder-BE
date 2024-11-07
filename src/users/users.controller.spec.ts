@@ -4,7 +4,13 @@ import { UsersService } from './users.service';
 
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './entities/user.entity';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import mongooseModule from '../modulesConfig/mongoose.module';
+import jwtModule from '../modulesConfig/jwt.module';
+import { UsersAuthService } from './users.auth.service';
+import { UsersAuthController } from './users.auth.controller';
+import { Email, EmailSchema } from '../email/entities/email.entity';
+import { EmailModule } from '../email/email.module';
+import configModule from '../modulesConfig/config.module';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -12,27 +18,20 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        MongooseModule.forRootAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: async (configService: ConfigService) => ({
-            uri: configService.get<string>('MONGODB_URI'),
-            connectionFactory: (c) => {
-              c.on('connected', () => console.log('Connected'));
-              c.on('error', () => console.log('error'));
-              return c;
-            },
-          }),
-        }),
+        configModule,
+        jwtModule,
+        EmailModule,
         MongooseModule.forFeature([
           {
             name: User.name,
             schema: UserSchema,
           },
+          { name: Email.name, schema: EmailSchema },
         ]),
+        mongooseModule,
       ],
-      controllers: [UsersController],
-      providers: [UsersService],
+      controllers: [UsersController, UsersAuthController],
+      providers: [UsersService, UsersAuthService],
     }).compile();
 
     controller = module.get<UsersController>(UsersController);

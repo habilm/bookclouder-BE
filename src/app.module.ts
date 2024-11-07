@@ -5,9 +5,9 @@ import { UsersModule } from './users/users.module';
 
 import { EmailModule } from './email/email.module';
 
-import mongooseModule from './modulesConfig/mongoose.module';
 import ConfigModule from './modulesConfig/config.module';
 import jwtModule from './modulesConfig/jwt.module';
+import mongooseModule from './modulesConfig/mongoose.module';
 
 @Module({
   imports: [ConfigModule, mongooseModule, jwtModule, UsersModule, EmailModule],
@@ -15,4 +15,3 @@ import jwtModule from './modulesConfig/jwt.module';
   providers: [AppService],
 })
 export class AppModule {}
-//

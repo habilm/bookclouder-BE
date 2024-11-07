@@ -3,14 +3,21 @@ import {
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { SignupDto } from './dto/user.dto';
-import { User } from './entities/user.entity';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { LoginResponse, LoginResponseType } from '../utility/res';
-import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { EmailService } from '../email/email.service';
+import { InjectModel } from '@nestjs/mongoose';
+import * as bcrypt from 'bcrypt';
+import { Model } from 'mongoose';
+import { EmailService, EmailTypes } from '../email/email.service';
+import { getHtml } from '../utility/hbs';
+import { errorLog } from '../utility/logs';
+import {
+  APIResponse,
+  APIResponseType,
+  LoginResponse,
+  LoginResponseType,
+} from '../utility/res';
+import { ForgotPasswordDto, SignupDto } from './dto/user.dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersAuthService {
@@ -41,14 +48,34 @@ export class UsersAuthService {
     }
   }
 
-  async login(email, password): Promise<LoginResponseType> {
+  async login(
+    email,
+    password,
+    resendEmailIfNotVerified,
+  ): Promise<LoginResponseType | APIResponseType> {
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnprocessableEntityException('Invalid email or password');
     }
 
+    if (resendEmailIfNotVerified) {
+      if (user.isEmailVerified)
+        throw new UnauthorizedException(
+          'Your Email address is already verified.',
+        );
+      await this.email.sendOTP(user.fullName, user.email);
+      return APIResponse(
+        'Verification Link has been sent to your Email Address.',
+      );
+    }
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Email not verified');
+      throw new UnauthorizedException('Your Email address not verified.');
+    }
+
+    if (user.isBlocked) {
+      throw new UnauthorizedException(
+        'There are unsolicited issues with your account. Please contact  our support team.',
+      );
     }
 
     const jwtPayload = { sub: user._id, email: user.email };
@@ -59,15 +86,55 @@ export class UsersAuthService {
     });
   }
 
-  async verifyEmail(uuid: string): Promise<boolean> {
-    const verifiedEmail = await this.email.verifyEmail(uuid);
-    await this.userModel.updateOne(
-      { email: verifiedEmail },
-      { isEmailVerified: true },
-    );
-    return true;
+  async verifyEmail(uuid: string, type: EmailTypes): Promise<string> {
+    const verifiedEmail = await this.email.verifyEmail(uuid, type);
+    try {
+      await this.userModel.updateOne(
+        { email: verifiedEmail },
+        { isEmailVerified: true },
+      );
+      return verifiedEmail;
+    } catch (err) {
+      throw new Error(err);
+    }
   }
-  async forgotPassword(id: number) {
-    return `This action returns a #${id} user`;
+
+  async requestForgotPassword(email: string): Promise<boolean> {
+    try {
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        errorLog('Forgot password requested for not existing user ' + email);
+        return true;
+      }
+      this.email.sendOTP(user.fullName, user.email, EmailTypes.FORGOT_PASSWORD);
+
+      return true;
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+  async forgotPasswordForm(uuid: string) {
+    return getHtml('reset-password', { uuid });
+  }
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<boolean> {
+    const email = await this.verifyEmail(
+      forgotPasswordDto.uuid,
+      EmailTypes.FORGOT_PASSWORD,
+    );
+
+    try {
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        errorLog('Reset password requested for not existing user ' + email);
+        return true;
+      }
+
+      user.password = forgotPasswordDto.password;
+      user.save();
+
+      return true;
+    } catch (err) {
+      throw new Error(err);
+    }
   }
 }

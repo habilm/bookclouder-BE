@@ -46,9 +46,9 @@ export class User extends Document {
   @Prop({
     required: false,
     Type: Boolean,
-    default: true,
+    default: false,
   })
-  active: boolean;
+  isBlocked: boolean;
 
   @Prop({
     required: true,

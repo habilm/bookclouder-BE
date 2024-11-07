@@ -17,7 +17,7 @@ export class Email extends Document {
     trim: true,
     type: String,
   })
-  name: string;
+  type: string;
 
   @Prop({
     required: true,

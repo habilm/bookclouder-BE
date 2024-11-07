@@ -1,9 +1,22 @@
-import { Controller, Post, Body, Get, Param, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 
-import { LoginDto, SignupDto, VerifyEmailDto } from './dto/user.dto';
-import { UsersAuthService } from './users.auth.service';
-import { APIResponse, LoginResponseType } from '../utility/res';
 import { Request } from 'express';
+import {
+  APIResponse,
+  APIResponseType,
+  LoginResponseType,
+} from '../utility/res';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RequestForgotPasswordDto,
+  SignupDto,
+  VerifyEmailDto,
+} from './dto/user.dto';
+import { UsersAuthService } from './users.auth.service';
+
+import { EmailTypes } from '../email/email.service';
+import { isXhr } from '../utility/helper';
 
 @Controller('auth')
 export class UsersAuthController {
@@ -14,11 +27,15 @@ export class UsersAuthController {
     return this.usersAuthService.signup(createUserDto);
   }
 
-  @Post('login')
-  async login(@Body() createUserDto: LoginDto): Promise<LoginResponseType> {
+  @Post('login/:resendEmailVerification?')
+  async login(
+    @Body() createUserDto: LoginDto,
+    @Param('resendEmailVerification') resendEmail?: 'resend',
+  ): Promise<LoginResponseType | APIResponseType> {
     return this.usersAuthService.login(
       createUserDto.email,
       createUserDto.password,
+      resendEmail === 'resend',
     );
   }
 
@@ -27,38 +44,58 @@ export class UsersAuthController {
     @Req() req: Request,
     @Param() verifyEmailDto: VerifyEmailDto,
   ) {
-    const requestType =
-      req.headers['content-type']?.includes('application/json');
+    const requestType = isXhr(req);
     try {
-      const verified = await this.usersAuthService.verifyEmail(
+      await this.usersAuthService.verifyEmail(
         verifyEmailDto.uuid,
+        EmailTypes.VERIFY_EMAIL,
       );
 
-      if (verified) {
-        return requestType ? APIResponse('Email Verified') : 'Email Verified';
-      }
+      return requestType ? APIResponse('Email Verified') : 'Email Verified';
     } catch (err) {
-      console.error(err);
-      if (requestType) {
-        throw err;
-      } else {
-        return err.message;
-      }
+      throw err;
     }
   }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.usersAuthService.findOne(+id);
-  // }
+  @Post('request-forgot-password')
+  async requestForgotPassword(
+    @Req() req: Request,
+    @Body() dto: RequestForgotPasswordDto,
+  ) {
+    const requestType = isXhr(req);
+    try {
+      const sent = await this.usersAuthService.requestForgotPassword(dto.email);
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.usersAuthService.update(+id, updateUserDto);
-  // }
+      if (sent) {
+        const text = 'Reset Password link has been sent';
+        return requestType ? APIResponse(text) : text;
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
 
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.usersAuthService.remove(+id);
-  // }
+  @Get('forgot-password/:uuid')
+  async forgotPasswordForm(@Param('uuid') uuid: string) {
+    return await this.usersAuthService.forgotPasswordForm(uuid);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(
+    @Req() req: Request,
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ) {
+    const requestType = isXhr(req);
+    try {
+      const verified =
+        await this.usersAuthService.forgotPassword(forgotPasswordDto);
+
+      if (verified) {
+        const message = 'Your password has been changed. Please Login';
+        return requestType ? APIResponse(message) : message;
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
 }
