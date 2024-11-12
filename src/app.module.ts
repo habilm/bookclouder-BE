@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 
 import { EmailModule } from './email/email.module';
@@ -12,6 +11,6 @@ import mongooseModule from './modulesConfig/mongoose.module';
 @Module({
   imports: [ConfigModule, mongooseModule, jwtModule, UsersModule, EmailModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule {}
