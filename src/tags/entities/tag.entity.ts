@@ -31,5 +31,12 @@ export class Tag extends Document {
     default: null,
   })
   color?: string;
+
+  @Prop({
+    required: false,
+    type: Date,
+    default: null,
+  })
+  deletedAt?: Date | null;
 }
-export const UserSchema = SchemaFactory.createForClass(User);
+export const TagSchema = SchemaFactory.createForClass(Tag);

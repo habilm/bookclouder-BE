@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -29,5 +30,6 @@ export class LinkCreateDTO {
 
   @IsOptional()
   @IsString({ each: true })
+  @IsArray()
   tags?: string[];
 }

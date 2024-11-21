@@ -1,22 +1,28 @@
 import {
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Link } from './entities/links.entity';
-import { Model, Types } from 'mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import { LinkCreateDTO } from './dtos/Links.dto';
+import { TagsService } from '../tags/tags.service';
 
 @Injectable()
 export class LinksService {
-  constructor(@InjectModel(Link.name) private LintModel: Model<Link>) {}
+  constructor(
+    @InjectModel(Link.name) private LintModel: Model<Link>,
+    @InjectConnection() private DbConnection: Connection,
+    private tagsService: TagsService,
+  ) {}
   async getLinks(userId?: string): Promise<Link[] | []> {
     return (
       (await this.LintModel.find({
         deletedAt: null,
         userId: new Types.ObjectId(userId),
-      })) || []
+      }).populate('tags')) || []
     );
   }
 
@@ -33,7 +39,7 @@ export class LinksService {
   async createLink(
     userId: string | Types.ObjectId,
     createData: LinkCreateDTO,
-  ): Promise<Link & { _id: unknown; exist?: boolean }> {
+  ): Promise<(Link & { _id: unknown; exist?: boolean }) | { exist?: boolean }> {
     userId = new Types.ObjectId(userId);
     const duplicateLink = await this.LintModel.findOne({
       userId: new Types.ObjectId(userId),
@@ -41,12 +47,53 @@ export class LinksService {
       deletedAt: null,
     });
 
-    if (duplicateLink) {
-      const link = duplicateLink.toJSON();
+    const session = await this.DbConnection.startSession();
+    session.startTransaction();
 
-      return { exist: true, ...link };
+    const existingTags = duplicateLink?.tags.map((tag) => tag.toString()) || [];
+
+    try {
+      const tagIds = [];
+      if (createData.tags?.length > 0) {
+        for (let i = 0; i < createData.tags.length; i++) {
+          const createdTag = await this.tagsService.findOrCreate(
+            userId,
+            { name: createData.tags[i] },
+            session,
+          );
+          if (!existingTags.includes(createdTag._id.toString())) {
+            tagIds.push(createdTag._id);
+          }
+        }
+      }
+
+      createData.tags = [...(duplicateLink?.tags || []), ...tagIds];
+      let link;
+      if (duplicateLink) {
+        for (const k in createData) {
+          duplicateLink[k] = createData[k];
+        }
+
+        duplicateLink.save();
+        await duplicateLink.populate('tags');
+        link = duplicateLink.toJSON();
+        link = { exist: true, ...link };
+      } else {
+        const created = await this.LintModel.create(
+          [{ userId, ...createData }],
+          {
+            session,
+          },
+        );
+        link = created.length > 0 ? await created[0].populate('tags') : {};
+      }
+      session.commitTransaction();
+      return link;
+    } catch (e) {
+      console.log(e);
+      session.abortTransaction();
+      throw new InternalServerErrorException(e);
     }
-    return await this.LintModel.create({ userId, ...createData });
   }
 
   async updateLink(
@@ -72,10 +119,21 @@ export class LinksService {
       throw new UnprocessableEntityException('Duplicate link');
     }
 
+    if (createData.tags?.length > 0) {
+      const tagIds = [];
+      for (let i = 0; i < createData.tags.length; i++) {
+        const createdTag = await this.tagsService.findOrCreate(userId, {
+          name: createData.tags[i],
+        });
+        tagIds.push(createdTag._id);
+      }
+      createData.tags = tagIds;
+    }
+
     for (const key in createData) {
       link.set(key, createData[key]);
     }
-
+    link.populate('tags');
     return await link.save();
   }
   async deleteLink(
