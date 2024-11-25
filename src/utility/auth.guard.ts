@@ -26,6 +26,11 @@ export class AuthGuard implements CanActivate {
         secret: this.config.get('JWT_SECRET'),
       });
 
+      /**
+       * {
+       *  sub: <user_id>
+       * }
+       */
       request['user'] = payload;
     } catch (e) {
       if (e instanceof TokenExpiredError) {

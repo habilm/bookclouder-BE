@@ -126,10 +126,15 @@ export class EmailService {
       const json = await req.json();
 
       const now = new Date();
-      fs.appendFileSync(
-        './logs/mail.log',
-        [body, JSON.stringify(json), now.toString(), '\n'].join('\n'),
-      );
+      try {
+        fs.appendFileSync(
+          './logs/mail.log',
+          [body, JSON.stringify(json), now.toString(), '\n'].join('\n'),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+
       if (!req.ok) {
         console.error(`Brevo API Error: ${json.message}`);
         throw new Error('Failed to send email');
