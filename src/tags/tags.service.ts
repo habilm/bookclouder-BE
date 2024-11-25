@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
 
@@ -22,7 +22,6 @@ export class TagsService {
    * @param name the name of the tag
    * @returns The Tag object
    */
-
   async findOrCreate(
     userId: string | Types.ObjectId,
     tag: Partial<Tag> & { name: string },
@@ -52,7 +51,22 @@ export class TagsService {
 
   update() {}
 
-  remove(id: number) {
-    return `This action removes a #${id} tag`;
+  async remove(
+    userId: string | Types.ObjectId,
+    tagId: string | Types.ObjectId,
+  ) {
+    if (!Types.ObjectId.isValid(tagId))
+      throw new NotFoundException('Item Not Found');
+    userId = new Types.ObjectId(userId);
+    const tag = await this.tagsModel.findOne({
+      userId: userId,
+      _id: new Types.ObjectId(tagId),
+    });
+
+    if (!tag) throw new NotFoundException('No tag found');
+
+    tag.set('deletedAt', new Date());
+
+    return await tag.save();
   }
 }

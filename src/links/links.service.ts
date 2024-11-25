@@ -36,6 +36,12 @@ export class LinksService {
     return link;
   }
 
+  /**
+   * Create or update link if it already exists.tags will merged with existing.
+   * @param userId user Object Id
+   * @param createData { LinkCreateDTO }
+   * @returns Link
+   */
   async createLink(
     userId: string | Types.ObjectId,
     createData: LinkCreateDTO,
@@ -131,9 +137,9 @@ export class LinksService {
     }
 
     for (const key in createData) {
-      link.set(key, createData[key]);
+      await link.set(key, createData[key]);
     }
-    link.populate('tags');
+    link.populate('tags', '_id name color');
     return await link.save();
   }
   async deleteLink(
