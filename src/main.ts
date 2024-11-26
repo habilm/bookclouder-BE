@@ -19,14 +19,18 @@ async function bootstrap() {
       },
       exceptionFactory: function (errors: ValidationError[]) {
         const validationErrors = {};
+        let firstError = '';
         for (const error of errors) {
-          validationErrors[error.property || '-'] = Object.values(
+          const filedError = Object.values(
             error.constraints || { default: 'Invalid Data' },
           )[0];
+          firstError = firstError ? firstError : filedError;
+          validationErrors[error.property || '-'] = filedError;
         }
 
         return new BadRequestException({
-          message: 'Validation Error',
+          message: firstError,
+          error: 'Validation Error',
           errors: validationErrors,
         });
       },
