@@ -108,10 +108,12 @@ export class LinksService {
     userId: string | Types.ObjectId,
     createData: LinkCreateDTO[],
   ) {
-    const createPromises = createData.map((data) => {
-      return this.createLink(userId, data);
-    });
-    await Promise.all(createPromises);
+    if (Array.isArray(createData)) {
+      const createPromises = createData.map((data) => {
+        return this.createLink(userId, data);
+      });
+      await Promise.all(createPromises);
+    }
     return this.getLinks(userId.toString());
   }
 

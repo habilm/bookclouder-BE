@@ -53,7 +53,7 @@ export class LinksController {
   async syncLinks(
     @Req() req: Request,
     @Res() res: Response,
-    @Body() body: LinkCreateDTO[],
+    @Body() body?: LinkCreateDTO[] | undefined,
   ) {
     //➡️ Body validation Validation
     const items = plainToInstance(LinkCreateDTO, body);
