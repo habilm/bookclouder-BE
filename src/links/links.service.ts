@@ -5,10 +5,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Link } from './entities/links.entity';
 import { Connection, Model, Types } from 'mongoose';
-import { LinkCreateDTO } from './dtos/Links.dto';
 import { TagsService } from '../tags/tags.service';
+import { LinkCreateDTO } from './dtos/Links.dto';
+import { Link } from './entities/links.entity';
 
 @Injectable()
 export class LinksService {
@@ -100,6 +100,19 @@ export class LinksService {
       session.abortTransaction();
       throw new InternalServerErrorException(e);
     }
+  }
+  /**
+   * create with payload and return all existing links
+   */
+  async syncLinks(
+    userId: string | Types.ObjectId,
+    createData: LinkCreateDTO[],
+  ) {
+    const createPromises = createData.map((data) => {
+      return this.createLink(userId, data);
+    });
+    await Promise.all(createPromises);
+    return this.getLinks(userId.toString());
   }
 
   async updateLink(
