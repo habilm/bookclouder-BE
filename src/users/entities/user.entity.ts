@@ -41,14 +41,21 @@ export class User extends Document {
     maxlength: 20,
     type: String,
   })
-  ip: string;
+  ip?: string;
 
   @Prop({
     required: false,
     Type: Boolean,
     default: false,
   })
-  isBlocked: boolean;
+  isBlocked?: boolean;
+
+  @Prop({
+    required: false,
+    Type: Date,
+    default: new Date(),
+  })
+  lastSynced?: Date;
 
   @Prop({
     required: true,

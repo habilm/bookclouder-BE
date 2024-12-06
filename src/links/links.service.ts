@@ -5,10 +5,16 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Link } from './entities/links.entity';
-import { Connection, Model, Types } from 'mongoose';
-import { LinkCreateDTO } from './dtos/Links.dto';
+import {
+  Connection,
+  FilterQuery,
+  Model,
+  RootFilterQuery,
+  Types,
+} from 'mongoose';
 import { TagsService } from '../tags/tags.service';
+import { LinkCreateDTO } from './dtos/Links.dto';
+import { Link } from './entities/links.entity';
 
 @Injectable()
 export class LinksService {
@@ -17,9 +23,13 @@ export class LinksService {
     @InjectConnection() private DbConnection: Connection,
     private tagsService: TagsService,
   ) {}
-  async getLinks(userId?: string): Promise<Link[] | []> {
+  async getLinks(
+    userId?: string,
+    filter: RootFilterQuery<FilterQuery<any>> = {},
+  ): Promise<Link[] | []> {
     return (
       (await this.LintModel.find({
+        ...filter,
         deletedAt: null,
         userId: new Types.ObjectId(userId),
       }).populate('tags')) || []
@@ -100,6 +110,26 @@ export class LinksService {
       session.abortTransaction();
       throw new InternalServerErrorException(e);
     }
+  }
+  /**
+   * create with payload and return all existing links
+   */
+  async syncLinks(
+    userId: string | Types.ObjectId,
+    createData: LinkCreateDTO[],
+    date: Date,
+  ) {
+    if (Array.isArray(createData)) {
+      const createPromises = createData.map((data) => {
+        return this.createLink(userId, data);
+      });
+      await Promise.all(createPromises);
+    }
+    return this.getLinks(userId.toString(), {
+      updatedAt: {
+        $gte: date,
+      },
+    });
   }
 
   async updateLink(

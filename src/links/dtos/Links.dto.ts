@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -32,4 +33,12 @@ export class LinkCreateDTO {
   @IsString({ each: true })
   @IsArray()
   tags?: string[];
+
+  @IsNotEmpty()
+  @IsDateString()
+  createdAt?: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  updatedAt?: string;
 }
