@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-import { User } from '../../users/entities/user.entity';
 import { Tag } from '../../tags/entities/tag.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Schema({
   timestamps: true,
@@ -13,6 +13,7 @@ export class Link extends Document {
     required: true,
     type: Types.ObjectId,
     ref: User.name,
+    index: true,
   })
   userId: string;
 
@@ -50,6 +51,7 @@ export class Link extends Document {
   @Prop({
     type: Date,
     default: null,
+    index: true,
   })
   deletedAt: Date | null;
 }

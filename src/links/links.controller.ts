@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -14,13 +13,14 @@ import {
   UseGuards,
   ValidationError,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { Request, Response } from 'express';
 import { AuthGuard } from '../utility/auth.guard';
 import { ParseDatePipe } from '../utility/date.pipe';
+import { exceptionFactory } from '../utility/validationPipe';
 import { LinkCreateDTO } from './dtos/Links.dto';
 import { LinksService } from './links.service';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 
 @Controller('links')
 @UseGuards(AuthGuard)
@@ -69,7 +69,7 @@ export class LinksController {
         const number = Number(item) + 1;
         const th =
           number == 1 ? 'st' : number == 2 ? 'nd' : number == 3 ? 'rd' : 'th';
-        throw new BadRequestException(
+        throw exceptionFactory(
           errors,
           `There is an error in ${number}${th} item. ${errors[0]?.constraints && Object.values(errors[0].constraints)[0]}`,
         );
@@ -79,6 +79,7 @@ export class LinksController {
 
     const user = req['user'].sub;
     const created = await this.linksService.syncLinks(user, body, date);
+
     res.status(200).json(created);
   }
 
