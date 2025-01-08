@@ -5,7 +5,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
+import {
+  Connection,
+  FilterQuery,
+  Model,
+  RootFilterQuery,
+  Types,
+} from 'mongoose';
 import { TagsService } from '../tags/tags.service';
 import { LinkCreateDTO } from './dtos/Links.dto';
 import { Link } from './entities/links.entity';
@@ -17,9 +23,13 @@ export class LinksService {
     @InjectConnection() private DbConnection: Connection,
     private tagsService: TagsService,
   ) {}
-  async getLinks(userId?: string): Promise<Link[] | []> {
+  async getLinks(
+    userId?: string,
+    filter: RootFilterQuery<FilterQuery<any>> = {},
+  ): Promise<Link[] | []> {
     return (
       (await this.LintModel.find({
+        ...filter,
         deletedAt: null,
         userId: new Types.ObjectId(userId),
       }).populate('tags')) || []
@@ -48,11 +58,10 @@ export class LinksService {
   ): Promise<(Link & { _id: unknown; exist?: boolean }) | { exist?: boolean }> {
     userId = new Types.ObjectId(userId);
     const duplicateLink = await this.LintModel.findOne({
-      userId: new Types.ObjectId(userId),
+      userId,
       url: createData.url,
       deletedAt: null,
     });
-
     const session = await this.DbConnection.startSession();
     session.startTransaction();
 
@@ -86,12 +95,12 @@ export class LinksService {
         link = { exist: true, ...link };
       } else {
         const created = await this.LintModel.create(
-          [{ userId, ...createData }],
+          [{ ...createData, userId }],
           {
             session,
           },
         );
-        link = created.length > 0 ? await created[0].populate('tags') : {};
+        link = created.length > 0 ? await created[0].populate('tags') : {}; //
       }
       session.commitTransaction();
       return link;
@@ -107,14 +116,23 @@ export class LinksService {
   async syncLinks(
     userId: string | Types.ObjectId,
     createData: LinkCreateDTO[],
+    date: Date,
   ) {
+    const newest = await this.getLinks(userId.toString(), {
+      updatedAt: {
+        $gte: date,
+      },
+    });
     if (Array.isArray(createData)) {
       const createPromises = createData.map((data) => {
+        if (data.isDeleted == true) {
+          return this.deleteLinkByURL(userId, data.url);
+        }
         return this.createLink(userId, data);
       });
-      await Promise.all(createPromises);
+      Promise.all(createPromises);
     }
-    return this.getLinks(userId.toString());
+    return newest;
   }
 
   async updateLink(
@@ -157,10 +175,17 @@ export class LinksService {
     link.populate('tags', '_id name color');
     return await link.save();
   }
+  /**
+   * Soft delete by link UID
+   * @param userId
+   * @param linkId
+   * @returns
+   */
   async deleteLink(
     userId: string | Types.ObjectId,
     linkId: string,
-  ): Promise<Link> {
+    throwOnError: boolean = false,
+  ): Promise<Link | false> {
     if (!Types.ObjectId.isValid(linkId))
       throw new NotFoundException('Item Not Found');
     userId = new Types.ObjectId(userId);
@@ -169,8 +194,36 @@ export class LinksService {
       _id: new Types.ObjectId(linkId),
     });
 
-    if (!link) throw new NotFoundException('No link found');
+    if (!link) {
+      if (throwOnError) throw new NotFoundException('No link found');
+      return false;
+    }
 
+    link.set('deletedAt', new Date());
+
+    return await link.save();
+  }
+  /**
+   * Soft delete by link URL
+   * @param userId
+   * @param linkId
+   * @returns
+   */
+  async deleteLinkByURL(
+    userId: string | Types.ObjectId,
+    url: string,
+    throwOnError: boolean = false,
+  ): Promise<Link | false> {
+    userId = new Types.ObjectId(userId);
+    const link = await this.LintModel.findOne({
+      userId: userId,
+      url: url,
+    });
+
+    if (!link) {
+      if (throwOnError) throw new NotFoundException('No link found');
+      return false;
+    }
     link.set('deletedAt', new Date());
 
     return await link.save();

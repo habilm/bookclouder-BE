@@ -1,5 +1,7 @@
 import {
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -25,11 +27,22 @@ export class LinkCreateDTO {
   @IsString()
   @MaxLength(3000)
   @MinLength(3)
-  @IsUrl()
   icon: string;
 
   @IsOptional()
   @IsString({ each: true })
   @IsArray()
   tags?: string[];
+
+  @IsNotEmpty()
+  @IsDateString()
+  createdAt?: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  updatedAt?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDeleted?: boolean;
 }

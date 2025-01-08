@@ -19,6 +19,7 @@ import {
 import { ForgotPasswordDto, SignupDto } from './dto/user.dto';
 import { User } from './entities/user.entity';
 import { getHtml } from '../utility/hbs';
+import { API_ERRORS } from '../utility/global.types';
 
 @Injectable()
 export class UsersAuthService {
@@ -70,12 +71,16 @@ export class UsersAuthService {
       );
     }
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Your Email address not verified.');
+      throw new UnauthorizedException(
+        'Your Email address not verified.',
+        API_ERRORS.EMAIL_NOT_VERIFIED,
+      );
     }
 
     if (user.isBlocked) {
       throw new UnauthorizedException(
-        'There are unsolicited issues with your account. Please contact  our support team.',
+        'There are unsolicited issues with your account. Please contact our support team.',
+        API_ERRORS.USER_ERROR,
       );
     }
 
