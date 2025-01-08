@@ -15,7 +15,7 @@ export class Link extends Document {
     ref: User.name,
     index: true,
   })
-  userId: string;
+  userId: Types.ObjectId;
 
   @Prop({
     required: true,

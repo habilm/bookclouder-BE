@@ -74,6 +74,7 @@ export class LinksController {
           `There is an error in ${number}${th} item. ${errors[0]?.constraints && Object.values(errors[0].constraints)[0]}`,
         );
       }
+      delete items[item].updatedAt;
     }
     //Body validation - END ⬅️
 

@@ -58,11 +58,10 @@ export class LinksService {
   ): Promise<(Link & { _id: unknown; exist?: boolean }) | { exist?: boolean }> {
     userId = new Types.ObjectId(userId);
     const duplicateLink = await this.LintModel.findOne({
-      userId: new Types.ObjectId(userId),
+      userId,
       url: createData.url,
       deletedAt: null,
     });
-
     const session = await this.DbConnection.startSession();
     session.startTransaction();
 
@@ -96,12 +95,12 @@ export class LinksService {
         link = { exist: true, ...link };
       } else {
         const created = await this.LintModel.create(
-          [{ userId, ...createData }],
+          [{ ...createData, userId }],
           {
             session,
           },
         );
-        link = created.length > 0 ? await created[0].populate('tags') : {};
+        link = created.length > 0 ? await created[0].populate('tags') : {}; //
       }
       session.commitTransaction();
       return link;
@@ -119,17 +118,21 @@ export class LinksService {
     createData: LinkCreateDTO[],
     date: Date,
   ) {
-    if (Array.isArray(createData)) {
-      const createPromises = createData.map((data) => {
-        return this.createLink(userId, data);
-      });
-      await Promise.all(createPromises);
-    }
-    return this.getLinks(userId.toString(), {
+    const newest = await this.getLinks(userId.toString(), {
       updatedAt: {
         $gte: date,
       },
     });
+    if (Array.isArray(createData)) {
+      const createPromises = createData.map((data) => {
+        if (data.isDeleted == true) {
+          return this.deleteLinkByURL(userId, data.url);
+        }
+        return this.createLink(userId, data);
+      });
+      Promise.all(createPromises);
+    }
+    return newest;
   }
 
   async updateLink(
@@ -172,10 +175,17 @@ export class LinksService {
     link.populate('tags', '_id name color');
     return await link.save();
   }
+  /**
+   * Soft delete by link UID
+   * @param userId
+   * @param linkId
+   * @returns
+   */
   async deleteLink(
     userId: string | Types.ObjectId,
     linkId: string,
-  ): Promise<Link> {
+    throwOnError: boolean = false,
+  ): Promise<Link | false> {
     if (!Types.ObjectId.isValid(linkId))
       throw new NotFoundException('Item Not Found');
     userId = new Types.ObjectId(userId);
@@ -184,8 +194,36 @@ export class LinksService {
       _id: new Types.ObjectId(linkId),
     });
 
-    if (!link) throw new NotFoundException('No link found');
+    if (!link) {
+      if (throwOnError) throw new NotFoundException('No link found');
+      return false;
+    }
 
+    link.set('deletedAt', new Date());
+
+    return await link.save();
+  }
+  /**
+   * Soft delete by link URL
+   * @param userId
+   * @param linkId
+   * @returns
+   */
+  async deleteLinkByURL(
+    userId: string | Types.ObjectId,
+    url: string,
+    throwOnError: boolean = false,
+  ): Promise<Link | false> {
+    userId = new Types.ObjectId(userId);
+    const link = await this.LintModel.findOne({
+      userId: userId,
+      url: url,
+    });
+
+    if (!link) {
+      if (throwOnError) throw new NotFoundException('No link found');
+      return false;
+    }
     link.set('deletedAt', new Date());
 
     return await link.save();
