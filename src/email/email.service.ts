@@ -1,11 +1,8 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { InjectModel } from '@nestjs/mongoose';
+import { ThrottlerException } from '@nestjs/throttler';
 import { Model } from 'mongoose';
 import * as fs from 'node:fs';
 import { getHtml } from '../utility/hbs';
@@ -63,7 +60,7 @@ export class EmailService {
     });
 
     if (alreadySent >= 3) {
-      throw new UnprocessableEntityException(
+      throw new ThrottlerException(
         'Too many verification requests for this email',
       );
     }

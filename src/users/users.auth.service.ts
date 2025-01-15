@@ -9,6 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
 import { EmailService, EmailTypes } from '../email/email.service';
 
+import { API_RESPONSE_TYPES } from '../utility/global.types';
+import { getHtml } from '../utility/hbs';
 import { errorLog } from '../utility/logs';
 import {
   APIResponse,
@@ -18,8 +20,6 @@ import {
 } from '../utility/res';
 import { ForgotPasswordDto, SignupDto } from './dto/user.dto';
 import { User } from './entities/user.entity';
-import { getHtml } from '../utility/hbs';
-import { API_ERRORS } from '../utility/global.types';
 
 @Injectable()
 export class UsersAuthService {
@@ -36,14 +36,14 @@ export class UsersAuthService {
       throw new UnprocessableEntityException('Email already exists');
     }
     try {
-      const created = await this.userModel.create(createUserDto);
-      const user = created.toObject();
-      delete user.password;
-      delete user._id;
+      await this.userModel.create(createUserDto);
 
       this.email.sendOTP(createUserDto.fullName, createUserDto.email);
 
-      return user;
+      return {
+        message:
+          'Congratulations! Your account has been created. Please check your email inbox and verify your email address and login',
+      };
     } catch (err) {
       console.error(err);
       throw new Error('Error creating user');
@@ -64,6 +64,9 @@ export class UsersAuthService {
       if (user.isEmailVerified)
         throw new UnauthorizedException(
           'Your Email address is already verified.',
+          {
+            description: API_RESPONSE_TYPES.EMAIL_ALREADY_VERIFIED,
+          },
         );
       await this.email.sendOTP(user.fullName, user.email);
       return APIResponse(
@@ -73,14 +76,14 @@ export class UsersAuthService {
     if (!user.isEmailVerified) {
       throw new UnauthorizedException(
         'Your Email address not verified.',
-        API_ERRORS.EMAIL_NOT_VERIFIED,
+        API_RESPONSE_TYPES.EMAIL_NOT_VERIFIED,
       );
     }
 
     if (user.isBlocked) {
       throw new UnauthorizedException(
         'There are unsolicited issues with your account. Please contact our support team.',
-        API_ERRORS.USER_ERROR,
+        API_RESPONSE_TYPES.USER_ERROR,
       );
     }
 
@@ -112,11 +115,15 @@ export class UsersAuthService {
         errorLog('Forgot password requested for not existing user ' + email);
         return true;
       }
-      this.email.sendOTP(user.fullName, user.email, EmailTypes.FORGOT_PASSWORD);
+      await this.email.sendOTP(
+        user.fullName,
+        user.email,
+        EmailTypes.FORGOT_PASSWORD,
+      );
 
       return true;
     } catch (err) {
-      throw new Error(err);
+      throw err;
     }
   }
   async forgotPasswordForm(uuid: string) {

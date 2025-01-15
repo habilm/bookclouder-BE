@@ -51,7 +51,9 @@ export class UsersAuthController {
         EmailTypes.VERIFY_EMAIL,
       );
 
-      return requestType ? APIResponse('Email Verified') : 'Email Verified';
+      const $message =
+        'Email Verified, Got the extension and login with your credentials';
+      return requestType ? APIResponse($message) : $message;
     } catch (err) {
       throw err;
     }

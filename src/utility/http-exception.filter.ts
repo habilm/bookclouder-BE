@@ -7,6 +7,7 @@ import {
 import { Request, Response } from 'express';
 import { isXhr } from './helper';
 import { errorLog } from './logs';
+import { ThrottlerException } from '@nestjs/throttler';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -39,7 +40,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const error = exception.getResponse();
     if (isXhr(request)) {
-      response.status(status).json(error);
+      if (exception instanceof ThrottlerException) {
+        response.status(status).json({
+          status: 'error',
+          message: 'Too many requests. Please try again later.',
+        });
+      } else {
+        response.status(status).json(error);
+      }
     } else {
       response.status(status).send(exception.message);
     }
