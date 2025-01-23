@@ -56,7 +56,7 @@ export class LinksService {
     userId: string | Types.ObjectId,
     createData: LinkCreateDTO,
   ): Promise<(Link & { _id: unknown; exist?: boolean }) | { exist?: boolean }> {
-    console.log('started creation Link:', createData.url);
+    console.error('started creation Link:', createData.url);
     userId = new Types.ObjectId(userId);
     const duplicateLink = await this.LintModel.findOne({
       userId,
@@ -86,7 +86,7 @@ export class LinksService {
       createData.tags = [...(duplicateLink?.tags || []), ...tagIds];
       let link;
       if (duplicateLink) {
-        console.log('The Link is duplicate:', createData.url);
+        console.error('The Link is duplicate:', createData.url);
         for (const k in createData) {
           duplicateLink[k] = createData[k];
         }
@@ -105,10 +105,10 @@ export class LinksService {
         link = created.length > 0 ? await created[0].populate('tags') : {}; //
       }
       session.commitTransaction();
-      console.log('link Created:', link);
+      console.error('link Created:', link);
       return link;
     } catch (e) {
-      console.log(e);
+      console.error(e);
       session.abortTransaction();
       throw new InternalServerErrorException(e);
     }
