@@ -8,7 +8,7 @@ export default JwtModule.registerAsync({
   useFactory: async function (configService: ConfigService) {
     return {
       secret: configService.get<string>('JWT_SECRET'),
-      signOptions: { expiresIn: '24h' },
+      signOptions: { expiresIn: '365d' }, 
       global: true,
     };
   },
